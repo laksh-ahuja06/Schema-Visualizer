@@ -1,0 +1,223 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// =========================
+// 1. CUSTOMER
+// =========================
+
+model Customer {
+  customer_id Int      @id @default(autoincrement())
+  name        String
+  email       String   @unique
+  phone       String?  @unique
+  password    String
+  created_at  DateTime @default(now())
+
+  addresses Address[]
+  cart      Cart?
+  orders    Orders[]
+  reviews   Review[]
+}
+
+
+// =========================
+// 2. SELLER
+// =========================
+
+model Seller {
+  seller_id  Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  phone      String?  @unique
+  password   String
+  created_at DateTime @default(now())
+
+  products Product[]
+}
+
+
+// =========================
+// 3. CATEGORY
+// =========================
+
+model Category {
+  category_id   Int     @id @default(autoincrement())
+  category_name String  @unique
+  description   String?
+
+  products Product[]
+}
+
+
+// =========================
+// 4. PRODUCT
+// =========================
+
+model Product {
+  product_id     Int     @id @default(autoincrement())
+  product_name   String
+  description    String?
+  price          Decimal
+  stock_quantity Int     @default(0)
+
+  seller_id   Int
+  category_id Int
+
+  seller   Seller   @relation(fields: [seller_id], references: [seller_id])
+  category Category @relation(fields: [category_id], references: [category_id])
+
+  cart_items  Cart_Item[]
+  order_items Order_Item[]
+  reviews     Review[]
+}
+
+
+// =========================
+// 5. ADDRESS
+// =========================
+
+model Address {
+  address_id   Int     @id @default(autoincrement())
+  customer_id  Int
+  address_line String
+  city         String
+  state        String
+  postal_code  String
+  country      String  @default("India")
+
+  customer Customer @relation(fields: [customer_id], references: [customer_id], onDelete: Cascade)
+
+  shipments Shipment[]
+}
+
+
+// =========================
+// 6. CART
+// =========================
+
+model Cart {
+  cart_id     Int      @id @default(autoincrement())
+  customer_id Int      @unique
+  created_at  DateTime @default(now())
+
+  customer Customer @relation(fields: [customer_id], references: [customer_id], onDelete: Cascade)
+
+  items Cart_Item[]
+}
+
+
+// =========================
+// 7. CART ITEM
+// =========================
+
+model Cart_Item {
+  cart_item_id Int @id @default(autoincrement())
+  cart_id      Int
+  product_id   Int
+  quantity     Int @default(1)
+
+  cart    Cart    @relation(fields: [cart_id], references: [cart_id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [product_id])
+
+  @@unique([cart_id, product_id])
+}
+
+
+// =========================
+// 8. ORDERS
+// =========================
+
+model Orders {
+  order_id     Int      @id @default(autoincrement())
+  customer_id  Int
+  order_date   DateTime @default(now())
+  total_amount Decimal
+  order_status String   @default("Pending")
+
+  customer Customer @relation(fields: [customer_id], references: [customer_id])
+
+  items    Order_Item[]
+  payment  Payment?
+  shipment Shipment?
+}
+
+
+// =========================
+// 9. ORDER ITEM
+// =========================
+
+model Order_Item {
+  order_item_id Int     @id @default(autoincrement())
+  order_id      Int
+  product_id    Int
+  quantity      Int
+  price         Decimal
+
+  order   Orders  @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [product_id])
+
+  @@unique([order_id, product_id])
+}
+
+
+// =========================
+// 10. PAYMENT
+// =========================
+
+model Payment {
+  payment_id     Int      @id @default(autoincrement())
+  order_id       Int      @unique
+  payment_date   DateTime @default(now())
+  amount         Decimal
+  payment_method String
+  payment_status String   @default("Pending")
+
+  order Orders @relation(fields: [order_id], references: [order_id])
+}
+
+
+// =========================
+// 11. SHIPMENT
+// =========================
+
+model Shipment {
+  shipment_id         Int       @id @default(autoincrement())
+  order_id            Int       @unique
+  shipping_address_id Int
+  shipped_date        DateTime?
+  delivery_date       DateTime?
+  shipment_status     String    @default("Processing")
+
+  order   Orders  @relation(fields: [order_id], references: [order_id])
+  address Address @relation(fields: [shipping_address_id], references: [address_id])
+}
+
+
+// =========================
+// 12. REVIEW
+// =========================
+
+model Review {
+  review_id   Int      @id @default(autoincrement())
+  customer_id Int
+  product_id  Int
+  rating      Int
+  review_text String?
+  review_date DateTime @default(now())
+
+  customer Customer @relation(fields: [customer_id], references: [customer_id], onDelete: Cascade)
+  product  Product  @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
+
+  @@unique([customer_id, product_id])
+}
